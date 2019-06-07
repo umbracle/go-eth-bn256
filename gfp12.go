@@ -14,6 +14,7 @@ type gfP12 struct {
 	x, y gfP6 // value is xω + y
 }
 
+/*
 var gfP12Gen *gfP12 = &gfP12{
 	x: gfP6{
 		x: gfP2{
@@ -44,6 +45,7 @@ var gfP12Gen *gfP12 = &gfP12{
 		},
 	},
 }
+*/
 
 func (e *gfP12) String() string {
 	return "(" + e.x.String() + "," + e.y.String() + ")"

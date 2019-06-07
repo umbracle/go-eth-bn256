@@ -140,8 +140,12 @@ func (e *G1) Unmarshal(m []byte) ([]byte, error) {
 		e.p.x, e.p.y = gfP{0}, gfP{0}
 	}
 
-	e.p.x.Unmarshal(m)
-	e.p.y.Unmarshal(m[numBytes:])
+	if err := e.p.x.Unmarshal(m); err != nil {
+		return nil, err
+	}
+	if err := e.p.y.Unmarshal(m[numBytes:]); err != nil {
+		return nil, err
+	}
 	montEncode(&e.p.x, &e.p.x)
 	montEncode(&e.p.y, &e.p.y)
 
@@ -243,18 +247,17 @@ func (e *G2) Marshal() []byte {
 		return make([]byte, 1)
 	}
 
-	ret := make([]byte, 1+numBytes*4)
-	ret[0] = 0x01
+	ret := make([]byte, numBytes*4)
 	temp := &gfP{}
 
 	montDecode(temp, &e.p.x.x)
-	temp.Marshal(ret[1:])
+	temp.Marshal(ret)
 	montDecode(temp, &e.p.x.y)
-	temp.Marshal(ret[1+numBytes:])
+	temp.Marshal(ret[numBytes:])
 	montDecode(temp, &e.p.y.x)
-	temp.Marshal(ret[1+2*numBytes:])
+	temp.Marshal(ret[2*numBytes:])
 	montDecode(temp, &e.p.y.y)
-	temp.Marshal(ret[1+3*numBytes:])
+	temp.Marshal(ret[3*numBytes:])
 
 	return ret
 }
@@ -264,24 +267,26 @@ func (e *G2) Marshal() []byte {
 func (e *G2) Unmarshal(m []byte) ([]byte, error) {
 	// Each value is a 256-bit number.
 	const numBytes = 256 / 8
-
+	if len(m) < 4*numBytes {
+		return nil, errors.New("bn256: not enough data")
+	}
+	// Unmarshal the points and check their caps
 	if e.p == nil {
 		e.p = &twistPoint{}
 	}
 
-	if len(m) > 0 && m[0] == 0x00 {
-		e.p.SetInfinity()
-		return m[1:], nil
-	} else if len(m) > 0 && m[0] != 0x01 {
-		return nil, errors.New("bn256: malformed point")
-	} else if len(m) < 1+4*numBytes {
-		return nil, errors.New("bn256: not enough data")
+	if err := e.p.x.x.Unmarshal(m); err != nil {
+		return nil, err
 	}
-
-	e.p.x.x.Unmarshal(m[1:])
-	e.p.x.y.Unmarshal(m[1+numBytes:])
-	e.p.y.x.Unmarshal(m[1+2*numBytes:])
-	e.p.y.y.Unmarshal(m[1+3*numBytes:])
+	if err := e.p.x.y.Unmarshal(m[numBytes:]); err != nil {
+		return nil, err
+	}
+	if err := e.p.y.x.Unmarshal(m[2*numBytes:]); err != nil {
+		return nil, err
+	}
+	if err := e.p.y.y.Unmarshal(m[3*numBytes:]); err != nil {
+		return nil, err
+	}
 	montEncode(&e.p.x.x, &e.p.x.x)
 	montEncode(&e.p.x.y, &e.p.x.y)
 	montEncode(&e.p.y.x, &e.p.y.x)
@@ -300,8 +305,7 @@ func (e *G2) Unmarshal(m []byte) ([]byte, error) {
 			return nil, errors.New("bn256: malformed point")
 		}
 	}
-
-	return m[1+4*numBytes:], nil
+	return m[4*numBytes:], nil
 }
 
 // GT is an abstract cyclic group. The zero value is suitable for use as the
@@ -326,6 +330,19 @@ func Pair(g1 *G1, g2 *G2) *GT {
 	return &GT{optimalAte(g2.p, g1.p)}
 }
 
+// PairingCheck calculates the Optimal Ate pairing for a set of points.
+func PairingCheck(a []*G1, b []*G2) bool {
+	acc := new(gfP12)
+	acc.SetOne()
+
+	for i := 0; i < len(a); i++ {
+		if !b[i].p.IsInfinity() && !a[i].p.IsInfinity() {
+			acc.Mul(acc, miller(b[i].p, a[i].p))
+		}
+	}
+	return finalExponentiation(acc).IsOne()
+}
+
 // Miller applies Miller's algorithm, which is a bilinear function from the
 // source groups to F_p^12. Miller(g1, g2).Finalize() is equivalent to Pair(g1,
 // g2).
@@ -340,11 +357,7 @@ func (g *GT) String() string {
 // ScalarBaseMult sets e to g*k where g is the generator of the group and then
 // returns out.
 func (e *GT) ScalarBaseMult(k *big.Int) *GT {
-	if e.p == nil {
-		e.p = &gfP12{}
-	}
-	e.p.Exp(gfP12Gen, k)
-	return e
+	panic("TODO")
 }
 
 // ScalarMult sets e to a*k and then returns e.
