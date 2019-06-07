@@ -28,7 +28,7 @@ func (e *gfP) Set(f *gfP) {
 }
 
 func (e *gfP) Invert(f *gfP) {
-	bits := [4]uint64{0x185cac6c5e089665, 0xee5b88d120b5b59e, 0xaa6fecb86184dc21, 0x8fb501e34aa387f9}
+	bits := [4]uint64{0x3c208c16d87cfd45, 0x97816a916871ca8d, 0xb85045b68181585d, 0x30644e72e131a029}
 
 	sum, power := &gfP{}, &gfP{}
 	sum.Set(rN1)
@@ -55,12 +55,22 @@ func (e *gfP) Marshal(out []byte) {
 	}
 }
 
-func (e *gfP) Unmarshal(in []byte) {
+func (e *gfP) Unmarshal(in []byte) error {
 	for w := uint(0); w < 4; w++ {
 		for b := uint(0); b < 8; b++ {
 			e[3-w] += uint64(in[8*w+b]) << (56 - 8*b)
 		}
 	}
+
+	// e has to be lower than p
+	i := 3
+	for i > 0 && e[i] == p[i] {
+		i--
+	}
+	if e[i] < p[i] {
+		return nil
+	}
+	return fmt.Errorf("bn256: coordinate exceeds modulus")
 }
 
 func montEncode(c, a *gfP) { gfpMul(c, a, r2) }
