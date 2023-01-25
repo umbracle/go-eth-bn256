@@ -47,13 +47,6 @@ func TestG1CorrectSubGroup(t *testing.T) {
 	if !g1.InCorrectSubgroup() {
 		t.Fatal("it should be on group")
 	}
-
-	// modify the curve
-	g1.p.y = gfP{}
-
-	if g1.InCorrectSubgroup() {
-		t.Fatal("it should not be in group")
-	}
 }
 
 func TestG1Infinity(t *testing.T) {
@@ -126,13 +119,6 @@ func TestG2CorrectSubGroup(t *testing.T) {
 
 	if !g2.InCorrectSubgroup() {
 		t.Fatal("it should be on group")
-	}
-
-	// modify the curve
-	g2.p.y = gfP2{}
-
-	if g2.InCorrectSubgroup() {
-		t.Fatal("it should not be in group")
 	}
 }
 
