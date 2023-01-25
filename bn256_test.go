@@ -5,8 +5,6 @@ import (
 
 	"bytes"
 	"crypto/rand"
-
-	"golang.org/x/crypto/bn256"
 )
 
 func TestG1(t *testing.T) {
@@ -16,7 +14,7 @@ func TestG1(t *testing.T) {
 	}
 	ma := Ga.Marshal()
 
-	Gb := new(bn256.G1).ScalarBaseMult(k)
+	Gb := new(G1).ScalarBaseMult(k)
 	mb := Gb.Marshal()
 
 	if !bytes.Equal(ma, mb) {
@@ -43,6 +41,45 @@ func TestG1Marshal(t *testing.T) {
 	}
 }
 
+func TestG1CorrectSubGroup(t *testing.T) {
+	_, g1, _ := RandomG1(rand.Reader)
+
+	if !g1.InCorrectSubgroup() {
+		t.Fatal("it should be on group")
+	}
+}
+
+func TestG1Infinity(t *testing.T) {
+	_, g1, _ := RandomG1(rand.Reader)
+	if g1.IsInfinity() {
+		t.Fatal("not point at infinity")
+	}
+
+	// point at infinity
+	g1.p.SetInfinity()
+
+	if !g1.IsInfinity() {
+		t.Fatal("point at infinity expected")
+	}
+
+	// point at infinity the bytes are 0
+	for _, i := range g1.Marshal() {
+		if i != 0 {
+			t.Fatal("point at infinity marshal is not 0")
+		}
+	}
+
+	g1 = new(G1)
+
+	buf := make([]byte, 64)
+	if _, err := g1.Unmarshal(buf); err != nil {
+		t.Fatal("failed to decode zero point")
+	}
+	if !g1.IsInfinity() {
+		t.Fatal("point at infinity expected")
+	}
+}
+
 func TestG2(t *testing.T) {
 	k, Ga, err := RandomG2(rand.Reader)
 	if err != nil {
@@ -50,9 +87,8 @@ func TestG2(t *testing.T) {
 	}
 	ma := Ga.Marshal()
 
-	Gb := new(bn256.G2).ScalarBaseMult(k)
+	Gb := new(G2).ScalarBaseMult(k)
 	mb := Gb.Marshal()
-	mb = append([]byte{0x01}, mb...)
 
 	if !bytes.Equal(ma, mb) {
 		t.Fatal("bytes are different")
@@ -78,41 +114,42 @@ func TestG2Marshal(t *testing.T) {
 	}
 }
 
-func TestGT(t *testing.T) {
-	k, Ga, err := RandomGT(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ma := Ga.Marshal()
+func TestG2CorrectSubGroup(t *testing.T) {
+	_, g2, _ := RandomG2(rand.Reader)
 
-	Gb, ok := new(bn256.GT).Unmarshal((&GT{gfP12Gen}).Marshal())
-	if !ok {
-		t.Fatal("unmarshal not ok")
-	}
-	Gb.ScalarMult(Gb, k)
-	mb := Gb.Marshal()
-
-	if !bytes.Equal(ma, mb) {
-		t.Fatal("bytes are different")
+	if !g2.InCorrectSubgroup() {
+		t.Fatal("it should be on group")
 	}
 }
 
-func TestGTMarshal(t *testing.T) {
-	_, Ga, err := RandomGT(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
+func TestG2Infinity(t *testing.T) {
+	_, g2, _ := RandomG2(rand.Reader)
+	if g2.IsInfinity() {
+		t.Fatal("not point at infinity")
 	}
-	ma := Ga.Marshal()
 
-	Gb := new(GT)
-	_, err = Gb.Unmarshal(ma)
-	if err != nil {
-		t.Fatal(err)
+	// point at infinity
+	g2.p.SetInfinity()
+
+	if !g2.IsInfinity() {
+		t.Fatal("point at infinity expected")
 	}
-	mb := Gb.Marshal()
 
-	if !bytes.Equal(ma, mb) {
-		t.Fatal("bytes are different")
+	// point at infinity the bytes are 0
+	for _, i := range g2.Marshal() {
+		if i != 0 {
+			t.Fatal("point at infinity marshal is not 0")
+		}
+	}
+
+	g2 = new(G2)
+
+	buf := make([]byte, 128)
+	if _, err := g2.Unmarshal(buf); err != nil {
+		t.Fatal("failed to decode zero point")
+	}
+	if !g2.IsInfinity() {
+		t.Fatal("point at infinity expected")
 	}
 }
 

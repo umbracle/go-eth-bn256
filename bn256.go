@@ -30,8 +30,6 @@ func randomK(r io.Reader) (k *big.Int, err error) {
 			return
 		}
 	}
-
-	return
 }
 
 // G1 is an abstract cyclic group. The zero value is suitable for use as the
@@ -48,6 +46,16 @@ func RandomG1(r io.Reader) (*big.Int, *G1, error) {
 	}
 
 	return k, new(G1).ScalarBaseMult(k), nil
+}
+
+func (g *G1) InCorrectSubgroup() bool {
+	tmp := new(G1)
+	tmp = tmp.ScalarMult(g, Order)
+	return tmp.IsInfinity()
+}
+
+func (g *G1) IsInfinity() bool {
+	return g.p.IsInfinity()
 }
 
 func (g *G1) String() string {
@@ -181,6 +189,16 @@ func RandomG2(r io.Reader) (*big.Int, *G2, error) {
 	}
 
 	return k, new(G2).ScalarBaseMult(k), nil
+}
+
+func (e *G2) InCorrectSubgroup() bool {
+	tmp := new(G2)
+	tmp = tmp.ScalarMult(e, Order)
+	return tmp.IsInfinity()
+}
+
+func (e *G2) IsInfinity() bool {
+	return e.p.IsInfinity()
 }
 
 func (e *G2) String() string {
